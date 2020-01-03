@@ -7,6 +7,20 @@ import (
 	"reflect"
 )
 
+func (Chat *TCPChat) Remove(client *client) {
+	Chat.mutex.Lock()
+	defer Chat.mutex.Unlock()
+
+	for i, check := range Chat.clients {
+		if check == client {
+			Chat.clients = append(Chat.clients[:i], Chat.clients[i+1:]...)
+		}
+	}
+
+	fmt.Println("=====Closing connection=====")
+	client.conn.Close()
+}
+
 func (Chat *TCPChat) BroadCast(command interface{}) error {
 	for _, client := range Chat.clients {
 		client.writer.Write(command)
@@ -50,9 +64,34 @@ func (Chat *TCPChat) Listen(address string) error {
 	}
 }
 
+func (client *client) WelcomeMessage() error {
+	msg := "Welcome to TCP-Chat!\n         _nnnn_
+        dGGGGMMb
+       @p~qp~~qMb
+       M|@||@) M|
+       @,----.JM|
+      JS^\__/  qKL
+     dZP        qKRb
+    dZP          qKKb
+   fZP            SMMb
+   HZM            MMMM
+   FqM            MMMM
+ __| ".        |\dS"qML
+ |    `.       | `' \Zq
+_)      \.___.,|     .'
+\____   )MMMMMP|   .'
+     `-'       `--' hjm\n"
+	if err := client.writer.WriteString(msg); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (Chat *TCPChat) Serve(client *client) {
 	cmd := NewReader(client.conn)
-	// defer Chat.Remove(client)
+	defer Chat.Remove(client)
+
+	client.WelcomeMessage()
 	for {
 		cmdName, err := cmd.Read()
 		if err != nil && err != io.EOF {
@@ -60,7 +99,7 @@ func (Chat *TCPChat) Serve(client *client) {
 		}
 		if cmdName != nil {
 			if reflect.TypeOf(cmdName).String() == "main.SendCommand" {
-				go Chat.BroadCast(&MessageCommand{Name: client.name, Message: cmdName.(SendCommand).Message})
+				go Chat.BroadCast(MessageCommand{Name: client.name, Message: cmdName.(SendCommand).Message})
 			} else if reflect.TypeOf(cmdName).String() == "main.NameCommand" {
 				client.name = cmdName.(NameCommand).Name
 			}

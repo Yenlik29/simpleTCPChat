@@ -19,7 +19,7 @@ func (w *CommandWriter) Write(command interface{}) error {
 	if command.(MessageCommand).Name == "" {
 		name = "unknown"
 	} else {
-		name = command.(MessageCommand).Name
+		name = command.(MessageCommand).Name[:len(command.(MessageCommand).Name)-1]
 	}
 
 	msg := "[" + name + "]:" + command.(MessageCommand).Message
