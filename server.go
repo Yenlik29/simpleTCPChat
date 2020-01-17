@@ -23,10 +23,20 @@ func (Chat *TCPChat) Remove(client *client) {
 
 func (Chat *TCPChat) BroadCast(command interface{}) error {
 	for _, client := range Chat.clients {
-		client.writer.Write(command)
+		if client.name != command.(MessageCommand).Name {
+			client.writer.Write(command)
+		}
+		fmt.Println("===", client.name, command.(MessageCommand).Name)
+		// client.writer.Write(command)
 	}
 	return nil
 }
+
+func (Chat *TCPChat) SetName(command string, client *client) error {
+	client.name = command[:len(command)-1]
+	return nil
+}
+
 
 func (Chat *TCPChat) Accept(Conn net.Conn) *client {
 	fmt.Println("=====NEW CONNECTION=====")
@@ -65,22 +75,16 @@ func (Chat *TCPChat) Listen(address string) error {
 }
 
 func (client *client) WelcomeMessage() error {
-	msg := "Welcome to TCP-Chat!\n         _nnnn_
-        dGGGGMMb
-       @p~qp~~qMb
-       M|@||@) M|
-       @,----.JM|
-      JS^\__/  qKL
-     dZP        qKRb
-    dZP          qKKb
-   fZP            SMMb
-   HZM            MMMM
-   FqM            MMMM
- __| ".        |\dS"qML
- |    `.       | `' \Zq
-_)      \.___.,|     .'
-\____   )MMMMMP|   .'
-     `-'       `--' hjm\n"
+	msg := "Welcome to TCP-Chat!\n         _nnnn_\n        dGGGGMMb\n       @p~qp~~qMb\n       M|@||@) M|\n       @,----.JM|\n      JS^\\__/  qKL\n     dZP        qKRb\n    dZP          qKKb\n   fZP            SMMb\n   HZM            MMMM\n   FqM            MMMM\n __| \".        |\\dS\"qML\n |    `.       | `' \\Zq\n_)      \\.___.,|     .'\n\\____   )MMMMMP|   .'\n     `-'       `--' hjm\n"
+	msg = msg + "[ENTER YOUR NAME]: "
+	if err := client.writer.WriteString(msg); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (client *client) Prefix() error {
+	msg := "[MESSAGE]: "
 	if err := client.writer.WriteString(msg); err != nil {
 		return err
 	}
@@ -88,24 +92,34 @@ _)      \.___.,|     .'
 }
 
 func (Chat *TCPChat) Serve(client *client) {
+	var count int
+
+	count = 0
 	cmd := NewReader(client.conn)
 	defer Chat.Remove(client)
 
 	client.WelcomeMessage()
 	for {
-		cmdName, err := cmd.Read()
+		if count != 0 {
+			client.Prefix()
+		}
+		fmt.Printf("[COUNT]:[%d][%s]\n", count, client.name)
+		msg, err := cmd.Read(count)
 		if err != nil && err != io.EOF {
 			fmt.Println("[ERROR]:", err)
 		}
-		if cmdName != nil {
-			if reflect.TypeOf(cmdName).String() == "main.SendCommand" {
-				go Chat.BroadCast(MessageCommand{Name: client.name, Message: cmdName.(SendCommand).Message})
-			} else if reflect.TypeOf(cmdName).String() == "main.NameCommand" {
-				client.name = cmdName.(NameCommand).Name
+		if msg != nil {
+			if reflect.TypeOf(msg).String() == "main.SendCommand" && count != 0 {
+				go Chat.BroadCast(MessageCommand{Name: client.name, Message: msg.(SendCommand).Message})
+			} else if reflect.TypeOf(msg).String() == "main.SendCommand" && count == 0 {
+				go Chat.SetName(msg.(SendCommand).Message, client)
+			} else if reflect.TypeOf(msg).String() == "main.NameCommand" {
+				client.name = msg.(NameCommand).Name
 			}
 		}
 		if err == io.EOF {
 			break
 		}
+		count++
 	}
 }

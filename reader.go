@@ -4,7 +4,7 @@ import (
 	"io"
 	"fmt"
 	"bufio"
-	"errors"
+	_ "errors"
 )
 
 func NewReader(reader io.Reader) *CommandReader {
@@ -33,8 +33,8 @@ func ReadName(r *CommandReader) (interface{}, error) {
 	return NameCommand{Name: name}, nil
 }
 
-func (r *CommandReader) Read() (interface{}, error) {
-	cmdName, err := r.reader.ReadString(' ')
+func (r *CommandReader) Read(count int) (interface{}, error) {
+	cmdName, err := r.reader.ReadString('\n')
 	if err != nil {
 		fmt.Println("[ERROR]:", err)
 		return nil, err
@@ -42,22 +42,10 @@ func (r *CommandReader) Read() (interface{}, error) {
 
 	fmt.Printf("[CMD]:[%s]:", cmdName[:len(cmdName)-1])
 
-	if cmdName == "SEND " {
-		FullStruct, err := ReadSend(r)
-		if err != nil {
-			return nil, err
-		} else {
-			return FullStruct, nil
-		}
-	} else if cmdName == "NAME " {
-		FullStruct, err := ReadName(r)
-		if err != nil {
-			return nil, err
-		} else {
-			return FullStruct, nil
-		}
+	if count == 0 {
+		return SendCommand{Message: cmdName}, nil
 	} else {
-		return nil, errors.New("Uknown command sent")
+		return SendCommand{Message: cmdName}, nil
 	}
 	return nil, nil
 }

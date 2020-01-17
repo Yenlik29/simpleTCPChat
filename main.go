@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"sync"
+
+	_ "github.com/marcusolsson/tui-go"
 )
 
 func NewServer() *TCPChat {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"time"
 )
 
 func NewWriter(writer io.Writer) *CommandWriter {
@@ -19,10 +20,12 @@ func (w *CommandWriter) Write(command interface{}) error {
 	if command.(MessageCommand).Name == "" {
 		name = "unknown"
 	} else {
-		name = command.(MessageCommand).Name[:len(command.(MessageCommand).Name)-1]
+		name = command.(MessageCommand).Name[:len(command.(MessageCommand).Name)]
 	}
 
-	msg := "[" + name + "]:" + command.(MessageCommand).Message
+	curTime := time.Now()
+	timing := curTime.Format("2006-01-02 15:04:05")
+	msg := "[" + timing + "]" + "[" + name + "]:" + command.(MessageCommand).Message
 	if err := w.WriteString(msg); err != nil {
 		return err
 	}
