@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"fmt"
 	"sync"
 
@@ -17,8 +18,12 @@ func NewServer() *TCPChat {
 func main() {
 	var Chat *TCPChat
 
+	port := ":8989"
 	Chat = NewServer()
-	if err := Chat.Listen(":2525"); err != nil {
+	if len(os.Args) == 2 {
+		port = ":" + os.Args[1]
+	}
+	if err := Chat.Listen(port); err != nil {
 		fmt.Println("[ERROR]: Failed to connect to TCP")
 		return
 	} else {
