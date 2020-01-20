@@ -37,5 +37,6 @@ type client struct {
 type TCPChat struct {
 	listener 	net.Listener
 	clients 	[]*client
+	quantity 	int
 	mutex 		*sync.Mutex
 }

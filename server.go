@@ -5,6 +5,7 @@ import (
 	"net"
 	"fmt"
 	"time"
+	"errors"
 	"strings"
 	"reflect"
 )
@@ -23,6 +24,7 @@ func (Chat *TCPChat) Remove(client *client) {
 	fmt.Println("=====Closing connection=====")
 	client.conn.Close()
 
+	Chat.quantity--
 	for _, client := range Chat.clients {
 		curTime := time.Now()
 		timing := curTime.Format("2006-01-02 15:04:05")
@@ -63,16 +65,22 @@ func (Chat *TCPChat) SetName(command string, client *client) error {
 }
 
 
-func (Chat *TCPChat) Accept(Conn net.Conn) *client {
+func (Chat *TCPChat) Accept(Conn net.Conn) (*client, error) {
 	fmt.Println("=====NEW CONNECTION=====")
 	fmt.Println("[ADDR]:", Conn.RemoteAddr().String())
+
+	if Chat.quantity == 10 {
+		Conn.Write([]byte("Chat is full of connections\n"))
+		Conn.Close()
+		return nil, errors.New("Maximum connections reached.")
+	}
 
 	Chat.mutex.Lock()
 	defer Chat.mutex.Unlock()
 
 	client := &client{conn: Conn, writer: NewWriter(Conn),}
 	Chat.clients = append(Chat.clients, client)
-	return client
+	return client, nil
 }
 
 func (Chat *TCPChat) Start() {
@@ -81,8 +89,13 @@ func (Chat *TCPChat) Start() {
 		if err != nil {
 			fmt.Println("[ERROR]: Failed to accept connection:", err)
 		} else {
-			client := Chat.Accept(conn)
-			go Chat.Serve(client)
+			client, err := Chat.Accept(conn)
+			if err == nil {
+				Chat.quantity++
+				go Chat.Serve(client)
+			} else {
+				fmt.Println("[ERROR]:", err)
+			}
 		}
 	}
 }

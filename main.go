@@ -1,4 +1,4 @@
-package main 
+package main
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 
 func NewServer() *TCPChat {
 	return &TCPChat{
+		quantity: 0,
 		mutex: &sync.Mutex{},
 	}
 }
