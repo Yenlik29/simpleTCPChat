@@ -28,7 +28,7 @@ func (Chat *TCPChat) Remove(client *client) {
 	for _, client := range Chat.clients {
 		curTime := time.Now()
 		timing := curTime.Format("2006-01-02 15:04:05")
-		msg := "\n[LEFT]:" + name + "\n[" + timing + "][" + client.name + "]:"
+		msg := "\n" + name + " has left our chat...\n[" + timing + "][" + client.name + "]:"
 		client.writer.writer.Write([]byte(msg))
 	}
 }
@@ -69,7 +69,7 @@ func (Chat *TCPChat) Accept(Conn net.Conn) (*client, error) {
 	fmt.Println("=====NEW CONNECTION=====")
 	fmt.Println("[ADDR]:", Conn.RemoteAddr().String())
 
-	if Chat.quantity == 10 {
+	if Chat.quantity == 2 {
 		Conn.Write([]byte("Chat is full of connections\n"))
 		Conn.Close()
 		return nil, errors.New("Maximum connections reached.")

@@ -22,6 +22,9 @@ func main() {
 	Chat = NewServer()
 	if len(os.Args) == 2 {
 		port = ":" + os.Args[1]
+	} else {
+		fmt.Println("[USAGE]: ./simpleTCPChat $port")
+		return
 	}
 	if err := Chat.Listen(port); err != nil {
 		fmt.Println("[ERROR]: Failed to connect to TCP")
