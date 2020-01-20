@@ -7,7 +7,6 @@ import (
 	"time"
 	"errors"
 	"strings"
-	"reflect"
 )
 
 func (Chat *TCPChat) Remove(client *client) {
@@ -43,12 +42,15 @@ func (Chat *TCPChat) BroadCast(command interface{}, client *client) error {
 		} else if client.name == command.(MessageCommand).Name {
 			client.Prefix()
 		}
-		fmt.Println("===", client.name, command.(MessageCommand).Name)
 	}
 	return nil
 }
 
-func (Chat *TCPChat) SetName(command string, client *client) error {
+func (Chat *TCPChat) SetName(command string, client *client) (error, int) {
+	if command == "\n" {
+		fmt.Println("[WARNING]: No name.")
+		return errors.New("No name"), -1
+	}
 	client.name = command[:len(command)-1]
 	for _, user := range Chat.clients {
 		if user.name == "" {
@@ -61,7 +63,7 @@ func (Chat *TCPChat) SetName(command string, client *client) error {
 		}
 	}
 	client.Prefix()
-	return nil
+	return nil, 0
 }
 
 
@@ -69,7 +71,7 @@ func (Chat *TCPChat) Accept(Conn net.Conn) (*client, error) {
 	fmt.Println("=====NEW CONNECTION=====")
 	fmt.Println("[ADDR]:", Conn.RemoteAddr().String())
 
-	if Chat.quantity == 2 {
+	if Chat.quantity == 10 {
 		Conn.Write([]byte("Chat is full of connections\n"))
 		Conn.Close()
 		return nil, errors.New("Maximum connections reached.")
@@ -145,15 +147,26 @@ func (Chat *TCPChat) Serve(client *client) {
 			fmt.Println("[ERROR]:", err)
 		}
 		if msg != nil {
-			if reflect.TypeOf(msg).String() == "main.SendCommand" && count != 0 {
+			if count != 0 {
+				count++
 				go Chat.BroadCast(MessageCommand{Name: client.name, Message: msg.(SendCommand).Message}, client)
-			} else if reflect.TypeOf(msg).String() == "main.SendCommand" && count == 0 {
-				go Chat.SetName(msg.(SendCommand).Message, client)
+			} else if count == 0 {
+				if msg.(SendCommand).Message == "\n" {
+					welcome := "[ENTER YOUR NAME]: "
+					client.writer.WriteString(welcome)
+				}
+				go func() {
+					_, res := Chat.SetName(msg.(SendCommand).Message, client)
+					if res == -1 {
+						count = 0
+					} else {
+						count++
+					}
+				}()
 			}
 		}
 		if err == io.EOF {
 			break
 		}
-		count++
 	}
 }
